@@ -1,9 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(url, key);
+}
 
 /**
  * Checks if a share_token already exists in the plans table.
@@ -11,6 +17,7 @@ const supabase = createClient(
  * @returns {Promise<boolean>}
  */
 export async function checkTokenExists(token) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('plans')
     .select('id')
@@ -27,6 +34,7 @@ export async function checkTokenExists(token) {
  * @returns {Promise<string>} The new event UUID
  */
 export async function insertEvent(payload) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('events')
     .insert({
@@ -53,6 +61,7 @@ export async function insertEvent(payload) {
  * @returns {Promise<string>} The new plan UUID
  */
 export async function insertPlan(payload) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('plans')
     .insert({
@@ -76,6 +85,7 @@ export async function insertPlan(payload) {
  * @param {string} eventId
  */
 export async function deleteEvent(eventId) {
+  const supabase = getSupabase();
   const { error } = await supabase
     .from('events')
     .delete()
@@ -95,6 +105,7 @@ export async function deleteEvent(eventId) {
  * @returns {Promise<any>}
  */
 export async function getPlanByToken(token) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('plans')
     .select(`
@@ -122,6 +133,7 @@ export async function getPlanByToken(token) {
  * @returns {Promise<any[]>}
  */
 export async function getTaskUpdates(planId) {
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('task_updates')
     .select('task_id, status, note, updated_at')
@@ -142,7 +154,7 @@ export async function getTaskUpdates(planId) {
  */
 export async function upsertTaskUpdate(payload) {
   const { plan_id, task_id, status, note } = payload;
-  
+  const supabase = getSupabase();
   const { error } = await supabase
     .from('task_updates')
     .upsert({
