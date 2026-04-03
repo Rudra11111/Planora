@@ -27,16 +27,18 @@ This document outlines the complete sequence of user interactions on the fronten
   * *"Analyzing Constraints..."*
   * *"Structuring Timeline..."*
   * *"Balancing Budget Priorities..."*
-* **Behind the Scenes:** The backend strictly queries the AI to ensure a minimum of 12 categorized tasks, an exact step-by-step timeline, fixes currency encodings, and safely saves the result into the Supabase DB—returning a unique `token`.
+* **Behind the Scenes:** The backend strictly queries the AI to ensure a minimum of 12 tasks (min 2 per category), a realistic and dynamic step-by-step timeline (at least 5 entries), and enforces that every task deadline matches a timeline entry. It automatically fixes currency encodings (`₹`), scrubs junk fields, and handles failures via a 3-attempt auto-retry loop before returning the final Supabase `token`.
 
 ---
 
 ## 3. The Master Dashboard (The Director's View)
 **Upon successful generation, the backend returns the data and the user is routed to `planora.com/plan/[token]`. This is the Master View.**
 
-* **The Timeline Visualizer:** A vertical or horizontal stepper explicitly defining the final 8 days: `T-7` through `Event Day`.
-* **The Kanban Task Board:** A premium, drag-and-drop-style board displaying all tasks simultaneously.
-  * Columns are explicitly separated by our locked categories: **Logistics, Marketing, Technical, Operations**.
+* **The Timeline Visualizer:** A vertical stepper defining the step-by-step event schedule (e.g., from `T-90` or `T-180` down to `Event Day`).
+* **The Kanban Task Board:** A premium board displaying all tasks.
+  * Columns are locked: **Logistics, Marketing, Technical, Operations**.
+  * Guaranteed at least 2 tasks per column.
+  * **Strict Synchronization:** Every task deadline perfectly matches a point on the Timeline Visualizer.
   * Tasks are color-coded by Priority (High/Medium/Low).
 * **The Peripheral Widgets:**
   * **Budget Ledger:** A clean grid showing specific itemized costs (e.g., Venue, Catering).

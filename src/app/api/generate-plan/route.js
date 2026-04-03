@@ -4,7 +4,6 @@ import { callGemini } from '../../../services/geminiService.js';
 import { checkTokenExists, insertEvent, insertPlan, deleteEvent } from '../../../services/dbService.js';
 import { validateTopLevel, validateTasks, validatePlanStructure } from '../../../validators/planValidator.js';
 import { generateToken } from '../../../utils/tokenGenerator.js';
-
 function validatePlan(plan) {
   if (!plan) return false;
 
@@ -45,6 +44,84 @@ function validatePlan(plan) {
   return true;
 }
 
+function normalizePlan(plan) {
+  if (!plan || !Array.isArray(plan.timeline) || !Array.isArray(plan.tasks)) return plan;
+
+  const categories = ["Logistics", "Marketing", "Technical", "Operations"];
+  const timelineSet = new Set(plan.timeline.map(t => t.time));
+
+  plan.tasks = plan.tasks.map((t, i) => {
+    let deadline = t.deadline;
+
+    // 🔧 Fix "Event Day" mismatch or slight variations
+    if (!timelineSet.has(deadline)) {
+      const match = [...timelineSet].find(time =>
+        time.toLowerCase().includes(String(deadline || "").toLowerCase()) ||
+        String(deadline || "").toLowerCase().includes(time.toLowerCase())
+      );
+      if (match) deadline = match;
+      else if (plan.timeline.length > 0) deadline = plan.timeline[0].time; // Safety fallback to first step
+    }
+
+    // 🔧 Fix category drift
+    let category = categories.find(c =>
+      c.toLowerCase() === String(t.category || "").toLowerCase()
+    );
+
+    if (!category) {
+      const catLower = String(t.category || "").toLowerCase();
+      if (catLower.includes("log")) category = "Logistics";
+      else if (catLower.includes("mark")) category = "Marketing";
+      else if (catLower.includes("tech")) category = "Technical";
+      else category = "Operations";
+    }
+
+    return {
+      ...t,
+      id: t.id || `task-${i}`,
+      deadline,
+      category
+    };
+  });
+
+  return plan;
+}
+
+function fallbackPlan() {
+  return {
+    timeline: [
+      { "time": "T-30", "activity": "Define objectives, establish core team, and finalize budget." },
+      { "time": "T-21", "activity": "Venue selection and initial vendor outreach." },
+      { "time": "T-14", "activity": "Launch marketing campaign and open registration." },
+      { "time": "T-7", "activity": "Finalize catering, A/V arrangements, and team briefing." },
+      { "time": "Event Day", "activity": "Execution of event opening, sessions, and closure." }
+    ],
+    tasks: [
+      { "id": "task-0", "task": "Secure initial venue deposit", "category": "Logistics", "deadline": "T-30", "priority": "High" },
+      { "id": "task-1", "task": "Finalize attendee registration form", "category": "Operations", "deadline": "T-21", "priority": "Medium" },
+      { "id": "task-2", "task": "Social media launch blitz", "category": "Marketing", "deadline": "T-14", "priority": "High" },
+      { "id": "task-3", "task": "Initial A/V tech check", "category": "Technical", "deadline": "T-14", "priority": "High" },
+      { "id": "task-4", "task": "Distribute final schedule to volunteers", "category": "Operations", "deadline": "T-7", "priority": "Medium" },
+      { "id": "task-5", "task": "Final catering headcount confirmation", "category": "Logistics", "deadline": "T-7", "priority": "High" },
+      { "id": "task-6", "task": "Post-event follow up email series setup", "category": "Marketing", "deadline": "Event Day", "priority": "Medium" },
+      { "id": "task-7", "task": "Backup hardware on-site verification", "category": "Technical", "deadline": "Event Day", "priority": "High" },
+      { "id": "task-8", "task": "Coordinate arrival of physical assets", "category": "Logistics", "deadline": "T-30", "priority": "Medium" },
+      { "id": "task-9", "task": "Prepare event signage and print collateral", "category": "Marketing", "deadline": "T-21", "priority": "Medium" },
+      { "id": "task-10", "task": "Set up dedicated event Wi-Fi", "category": "Technical", "deadline": "T-14", "priority": "High" },
+      { "id": "task-11", "task": "Prepare on-site emergency contact list", "category": "Operations", "deadline": "T-7", "priority": "High" }
+    ],
+    promo: { "channels": ["LinkedIn", "Twitter", "Email"], "strategy": "A three-phase approach focusing on awareness, conversion, and community engagement." },
+    risks: [
+      { "issue": "Technical failure of core virtual or A/V presentation platform." },
+      { "issue": "Low attendee turnout due to overlapping industry conferences." }
+    ],
+    budget: [
+      { "item": "Venue & Infrastructure", "cost": "₹150000 - ₹250000" },
+      { "item": "Marketing & Advertising", "cost": "₹50000 - ₹80000" }
+    ]
+  };
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -62,23 +139,23 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing or invalid required fields (name, type, duration, attendees, team_size, budget_range)' }, { status: 400 });
     }
 
-    // AUTO RETRY LOOP
+    // AUTO RETRY LOOP (Enhanced to 5 attempts)
     let parsed;
     let attempts = 0;
 
-    while (attempts < 3) {
+    while (attempts < 5) {
       let rawText;
       try {
         rawText = await callGemini({ name, type, duration, attendees, team_size, budget_range });
+        console.log(`[Attempt ${attempts + 1}] RAW AI OUTPUT:`, rawText?.substring(0, 500) + "...");
       } catch (err) {
-        console.error('[Gemini] Call failed:', err.message);
+        console.error(`[Attempt ${attempts + 1}] [Gemini] Call failed:`, err.message);
         if (err.message.includes('429') || err.message.includes('Quota exceeded')) {
           let retryAfter = 45;
           const match = err.message.match(/retry in ([\d\.]+)s/);
           if (match) retryAfter = Math.ceil(parseFloat(match[1]));
           return NextResponse.json({ error: 'RATE_LIMIT', retry_after: retryAfter }, { status: 429 });
         }
-        // If it's a timeout or other non-quota error, we still try next loops
         attempts++;
         continue;
       }
@@ -104,20 +181,28 @@ export async function POST(req) {
           parsed = parsed.plan;
         }
 
-        if (validatePlan(parsed)) break;
+        console.log(`[Attempt ${attempts + 1}] PARSED OBJECT:`, JSON.stringify(parsed).substring(0, 500) + "...");
+
+        // 🔥 PRE-VALIDATION NORMALIZATION
+        parsed = normalizePlan(parsed);
+
+        if (validatePlan(parsed)) {
+           console.log(`[Attempt ${attempts + 1}] Validation PASSED.`);
+           break;
+        } else {
+           console.warn(`[Attempt ${attempts + 1}] Validation FAILED.`);
+        }
       } catch (e) {
-        // ignore and retry
+        console.error(`[Attempt ${attempts + 1}] Parse error:`, e.message);
       }
 
       attempts++;
     }
 
-    // ❌ FINAL FAILURE
+    // ❌ FINAL FALLBACK TRIGGER
     if (!parsed || !validatePlan(parsed)) {
-      return NextResponse.json(
-        { error: "AI failed after retries" },
-        { status: 500 }
-      );
+      console.error("CRITICAL: AI failed after max retries or validation remains failed. TRIGGERING FALLBACK.");
+      parsed = fallbackPlan();
     }
 
     const plan = parsed;

@@ -40,16 +40,17 @@ The response is 100% strictly guaranteed to look exactly like this. You do NOT n
 {
   "plan": {
     "timeline": [ 
-      { "time": "T-7", "activity": "string" }, 
-      { "time": "T-6", "activity": "string" } 
-      // ... goes sequentially down to "Event Day" (exactly 8 steps always)
+      { "time": "T-90", "activity": "string" }, 
+      { "time": "T-30", "activity": "string" },
+      { "time": "Event Day", "activity": "string" } 
+      // ... dynamic, at least 5 entries.
     ],
     "tasks": [
       {
         "id": "uuid-string",
         "task": "string",
         "category": "Logistics | Marketing | Technical | Operations",
-        "deadline": "T-7",
+        "deadline": "T-90", // MUST match a 'time' value in the timeline
         "priority": "High | Medium | Low"
       }
     ],
@@ -77,9 +78,10 @@ The response is 100% strictly guaranteed to look exactly like this. You do NOT n
 Once the JSON returns, route to the dashboard viewing mode.
 
 1. **The Timeline (Vertical Stepper):**
-   - Render the `plan.timeline` array. Since it is strictly 8 steps ("T-7" down to "Event Day"), render this as a fixed timeline on the left rail of the screen.
+   - Render the `plan.timeline` array. This is a dynamic, step-by-step schedule (typically 5 to 20 steps).
 2. **The Kanban Board (Tasks):**
-   - We are guaranteed a minimum of **12 tasks** spread across **Logistics, Marketing, Technical, and Operations** (min 3 each).
+   - We are guaranteed a minimum of **12 tasks** spread across **Logistics, Marketing, Technical, and Operations** (min 2 each).
+   - **Deadline Validation:** Every task `deadline` string is guaranteed to exactly match a `time` string in the timeline array. You can use this for visual linking.
    - *Design Required:* A gorgeous Kanban-style board using Stitches. Columns represent Categories. Color-code tasks by Priority (High = Accent Red, Low = Muted Blue).
 3. **Widgets (Budget, Risks, Promo):**
    - Build a masonry grid of cards for the peripheral data.

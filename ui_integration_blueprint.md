@@ -22,30 +22,31 @@ The frontend must interface with our Next.js API route: `POST /api/generate-plan
 Thanks to the backend structural guards, the frontend can **safely assume** this exact shape without defensive null-checking every field:
 ```json
 {
-  "plan": {
     "timeline": [ 
-      { "time": "T-7" /* exactly these keys down to Event Day */, "activity": "string" } 
+      { "time": "T-90", "activity": "string" }, 
+      { "time": "T-30", "activity": "string" },
+      { "time": "Event Day", "activity": "string" } 
+      // ... dynamic, at least 5 entries.
     ],
     "tasks": [
       {
         "id": "uuid-string",
         "task": "string",
         "category": "Logistics | Marketing | Technical | Operations",
-        "deadline": "T-7",
+        "deadline": "T-90", // MUST match a 'time' value in the timeline
         "priority": "High | Medium | Low"
       }
     ],
     "promo": { "channels": ["string"], "strategy": "string" },
     "risks": [{ "issue": "string" }],
-    "budget": [{ "item": "string", "cost": "₹range" }]
-  },
+  "budget": [{ "item": "string", "cost": "₹range" }],
   "token": "abcdef123456",
   "plan_id": "supabse-uuid"
 }
 ```
 
 > [!IMPORTANT]
-> **Key Context**: The backend will guarantee a minimum of **12 tasks** (min 3 per category) and exactly **8 step-by-step timeline entries** (T-7 through Event Day).
+> **Key Context**: The backend will guarantee a minimum of **12 tasks** (min 2 per category) and a realistic, step-by-step **timeline of at least 5 entries**. Every task `deadline` is strictly validated to exist in the `timeline`.
 
 ---
 
@@ -70,11 +71,11 @@ Thanks to the backend structural guards, the frontend can **safely assume** this
 **Goal:** Provide an incredibly premium, dynamic way to interact with the generated content. 
 
 **Action Items:**
-1. **The Timeline View:**
-   - Map the `plan.timeline` array into a visually distinct vertical or horizontal stepper. 
-   - Because the backend ensures exact `T-7` through `Event Day` keys, the UI can confidently render these with accompanying icons.
-2. **The Task Board (Kanban / Filtered List):**
-   - Because we are guaranteed at least 12 tasks across 4 strict categories (`Logistics`, `Marketing`, `Technical`, `Operations`), a Kanban board separated by category is perfect here.
+1. **The Timeline (Vertical Stepper):**
+   - Render the `plan.timeline` array. This is a dynamic, step-by-step schedule (typically 5 to 20 steps).
+2. **The Kanban Board (Tasks):**
+   - We are guaranteed a minimum of **12 tasks** spread across **Logistics, Marketing, Technical, and Operations** (min 2 each).
+   - **Deadline Validation:** Every task `deadline` string is guaranteed to exactly match a `time` string in the timeline array. You can use this for visual linking.
    - Color code priorities (High = Red, Medium = Yellow, Low = Green/Blue).
    - Provide a filter to view tasks by "Deadline" (e.g. "What is due on T-4?").
 
