@@ -78,7 +78,9 @@ export async function POST(req) {
           if (match) retryAfter = Math.ceil(parseFloat(match[1]));
           return NextResponse.json({ error: 'RATE_LIMIT', retry_after: retryAfter }, { status: 429 });
         }
-        return NextResponse.json({ error: `AI service error: ${err.message}` }, { status: 500 });
+        // If it's a timeout or other non-quota error, we still try next loops
+        attempts++;
+        continue;
       }
 
       try {
@@ -97,6 +99,7 @@ export async function POST(req) {
 
         parsed = JSON.parse(cleaned);
 
+        // 🔥 unwrap Gemini structure
         if (parsed.plan) {
           parsed = parsed.plan;
         }
@@ -109,6 +112,7 @@ export async function POST(req) {
       attempts++;
     }
 
+    // ❌ FINAL FAILURE
     if (!parsed || !validatePlan(parsed)) {
       return NextResponse.json(
         { error: "AI failed after retries" },
@@ -126,9 +130,10 @@ export async function POST(req) {
     delete plan.title;
     delete plan.summary;
 
+    // 🔴 TASK ID NORMALIZATION
     plan.tasks = plan.tasks.map((t, i) => ({
       ...t,
-      id: t.id || `task-${i}`,
+      id: crypto.randomUUID() || t.id || `task-${i}`,
     }));
 
     // DETERMINISTIC POST-PARSE STRUCTURAL GUARD

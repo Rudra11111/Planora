@@ -1,14 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
+let _supabase = null;
+
 function getSupabase() {
+  if (_supabase) return _supabase;
+
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
+  // Fallback to ANON_KEY if SERVICE_ROLE_KEY is missing (flexible hardening)
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error('Missing Supabase environment variables');
+    throw new Error("Missing Supabase environment variables (URL or Key)");
   }
 
-  return createClient(url, key);
+  _supabase = createClient(url, key);
+  return _supabase;
 }
 
 /**
@@ -17,8 +23,7 @@ function getSupabase() {
  * @returns {Promise<boolean>}
  */
 export async function checkTokenExists(token) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('plans')
     .select('id')
     .eq('share_token', token)
@@ -34,8 +39,7 @@ export async function checkTokenExists(token) {
  * @returns {Promise<string>} The new event UUID
  */
 export async function insertEvent(payload) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('events')
     .insert({
       name:         payload.name,
@@ -61,8 +65,7 @@ export async function insertEvent(payload) {
  * @returns {Promise<string>} The new plan UUID
  */
 export async function insertPlan(payload) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('plans')
     .insert({
       event_id:    payload.event_id,
@@ -85,8 +88,7 @@ export async function insertPlan(payload) {
  * @param {string} eventId
  */
 export async function deleteEvent(eventId) {
-  const supabase = getSupabase();
-  const { error } = await supabase
+  const { error } = await getSupabase()
     .from('events')
     .delete()
     .eq('id', eventId);
@@ -105,8 +107,7 @@ export async function deleteEvent(eventId) {
  * @returns {Promise<any>}
  */
 export async function getPlanByToken(token) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('plans')
     .select(`
       id,
@@ -133,8 +134,7 @@ export async function getPlanByToken(token) {
  * @returns {Promise<any[]>}
  */
 export async function getTaskUpdates(planId) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('task_updates')
     .select('task_id, status, note, updated_at')
     .eq('plan_id', planId);
@@ -154,8 +154,8 @@ export async function getTaskUpdates(planId) {
  */
 export async function upsertTaskUpdate(payload) {
   const { plan_id, task_id, status, note } = payload;
-  const supabase = getSupabase();
-  const { error } = await supabase
+  
+  const { error } = await getSupabase()
     .from('task_updates')
     .upsert({
       plan_id,
