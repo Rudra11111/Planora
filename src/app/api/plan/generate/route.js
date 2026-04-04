@@ -17,16 +17,19 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 function validatePlan(plan) {
-  if (!plan) return false;
+  if (!plan) {
+    console.warn('[validatePlan] FAIL: Plan object is null/undefined');
+    return false;
+  }
 
   const { timeline, tasks } = plan;
 
   if (!Array.isArray(timeline) || timeline.length < 5) {
-    console.warn('[validatePlan] FAIL: timeline length', timeline?.length);
+    console.warn('[validatePlan] FAIL: Timeline must be an array with at least 5 steps. Current length:', timeline?.length);
     return false;
   }
   if (!Array.isArray(tasks) || tasks.length < 12) {
-    console.warn('[validatePlan] FAIL: tasks length', tasks?.length);
+    console.warn('[validatePlan] FAIL: Tasks must be an array with at least 12 items. Current length:', tasks?.length);
     return false;
   }
 
@@ -35,7 +38,7 @@ function validatePlan(plan) {
 
   for (const t of tasks) {
     if (!categories.includes(t.category)) {
-      console.warn('[validatePlan] FAIL: bad category', t.category);
+      console.warn(`[validatePlan] FAIL: Task "${t.task}" has invalid category: "${t.category}"`);
       return false;
     }
     count[t.category]++;
@@ -43,7 +46,7 @@ function validatePlan(plan) {
 
   for (const cat of categories) {
     if (count[cat] < 2) {
-      console.warn(`[validatePlan] FAIL: too few tasks in ${cat}:`, count[cat]);
+      console.warn(`[validatePlan] FAIL: Category "${cat}" only has ${count[cat]} tasks. Minimum is 2.`);
       return false;
     }
   }

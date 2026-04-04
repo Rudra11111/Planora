@@ -1,5 +1,5 @@
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama3-8b-8192'; // Higher TPM limit on free tier vs 70b-versatile
+const MODEL = 'llama-3.1-8b-instant'; // Direct replacement for decommissioned llama3-8b-8192
 const TIMEOUT_MS = 25_000;
 
 /**
