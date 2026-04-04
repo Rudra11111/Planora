@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import { decodeEnv } from '../lib/decodeEnv.js';
 
 let _supabase = null;
 
 function getSupabase() {
   if (_supabase) return _supabase;
 
-  const url = process.env.SUPABASE_URL;
+  const url = decodeEnv('SUPABASE_URL');
   // Fallback to ANON_KEY if SERVICE_ROLE_KEY is missing (flexible hardening)
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const key = decodeEnv('SUPABASE_SERVICE_ROLE_KEY') || decodeEnv('SUPABASE_ANON_KEY');
 
   if (!url || !key) {
     throw new Error("Missing Supabase environment variables (URL or Key)");
