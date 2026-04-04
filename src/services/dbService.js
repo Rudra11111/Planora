@@ -170,3 +170,23 @@ export async function upsertTaskUpdate(payload) {
 
   return true;
 }
+
+/**
+ * Updates the plan_data for a given plan ID.
+ * @param {string} planId
+ * @param {object} updatedPlanData
+ * @returns {Promise<boolean>}
+ */
+export async function updatePlanData(planId, updatedPlanData) {
+  const { error } = await getSupabase()
+    .from('plans')
+    .update({ plan_data: updatedPlanData })
+    .eq('id', planId);
+
+  if (error) {
+    throw new Error(`Failed to update plan data: ${error.message}`);
+  }
+
+  return true;
+}
+
