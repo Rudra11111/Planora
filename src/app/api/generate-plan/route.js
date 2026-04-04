@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { callGemini } from '../../../services/geminiService.js';
+import { callGroq as callAI } from '../../../services/groqService.js';
 import { checkTokenExists, insertEvent, insertPlan, deleteEvent } from '../../../services/dbService.js';
 import { validateTopLevel, validateTasks, validatePlanStructure } from '../../../validators/planValidator.js';
 import { generateToken } from '../../../utils/tokenGenerator.js';
@@ -143,8 +143,8 @@ export async function POST(req) {
 
     try {
       // 🚀 TRY REAL API
-      const rawText = await callGemini({ name, type, duration, attendees, team_size, budget_range, summary: summary || '' });
-      console.log(`[Gemini Success] RAW AI OUTPUT length: ${rawText?.length}`);
+      const rawText = await callAI({ name, type, duration, attendees, team_size, budget_range, summary: summary || '' });
+      console.log(`[Groq Success] RAW AI OUTPUT length: ${rawText?.length}`);
 
       let cleaned = rawText
         .replace(/```json/gi, "")

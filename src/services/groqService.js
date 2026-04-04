@@ -1,0 +1,106 @@
+const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL = 'llama3-70b-8192';
+const TIMEOUT_MS = 25_000;
+
+/**
+ * Builds the chat messages for Groq.
+ */
+function buildMessages({ name, type, duration, attendees, team_size, budget_range, summary }) {
+  const summaryLine = summary && summary.trim() 
+    ? `- Event Context / Summary: ${summary.trim()}`
+    : '';
+
+  return [
+    {
+      role: 'system',
+      content: `You are an expert event planner AI. Generate a comprehensive, detailed event plan.
+      
+STRICT OUTPUT FORMAT RULES:
+Return ONLY valid JSON. 
+
+plan MUST include ALL of the following fields and match this schema exactly:
+- timeline (array of objects): { "time": "T-90 | Event Day 1 | etc", "activity": "string" }
+- tasks (array of minimum 12 items): { "id": "string", "task": "string", "category": "Logistics | Marketing | Technical | Operations", "deadline": "must match a timeline.time key", "priority": "High | Medium | Low" }
+- promo (object): { "channels": ["string"], "strategy": "string" }
+- risks (array of objects): { "issue": "string" }
+- budget (array of objects): { "item": "string", "cost": "₹range" }
+
+CRITICAL RULES:
+1. CATEGORY LOCK: category MUST be one of exactly: "Logistics", "Marketing", "Technical", "Operations"
+2. TIMELINE FLEXIBILITY: Generate a realistic timeline for this event type. Use logical strings for the 'time' field (e.g. "T-90", "T-7", "Event Day - Day 1", "T+7").
+3. DO NOT OMIT ANY FIELD.
+4. DO NOT ADD EXTRA FIELDS like title or summary.
+5. DEADLINE STRICT MATCH: Every task.deadline MUST EXACTLY match one of the timeline.time values. No variations allowed.`
+    },
+    {
+      role: 'user',
+      content: `Generate a plan for:
+- Name: ${name}
+- Type: ${type}
+- Duration: ${duration}
+- Attendees: ${attendees}
+- Team Size: ${team_size}
+- Budget Range: ${budget_range}
+${summaryLine}`
+    }
+  ];
+}
+
+/**
+ * Calls Groq Cloud API directly with a 25-second AbortSignal timeout.
+ * @param {object} eventData
+ * @returns {Promise<string>} Raw JSON text from Groq
+ */
+export async function callGroq(eventData) {
+  const messages = buildMessages(eventData);
+  const apiKey = process.env.GROQ_API_KEY;
+  
+  console.log(`[Groq] Using API Key starting with: ${apiKey ? apiKey.substring(0, 8) + '...' : 'NOT_FOUND'}`);
+  console.log('🚀 CALLING GROQ NOW');
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        messages,
+        model: MODEL,
+        temperature: 0.1,
+        max_tokens: 4096,
+        response_format: { type: "json_object" }
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Groq API call timed out after 25 seconds');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('RATE_LIMIT');
+    }
+    const errBody = await response.text();
+    throw new Error(`Groq HTTP ${response.status}: ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content;
+
+  if (!text) {
+    throw new Error('Groq returned an empty or unexpected response structure');
+  }
+
+  return text;
+}
