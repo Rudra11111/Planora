@@ -125,18 +125,28 @@ function fallbackPlan() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, type, duration, attendees, team_size, budget_range } = body;
+    const { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range } = body;
 
-    // Field Integrity (Ensure strings / numbers are valid types and strings are non-empty)
-    if (
-      typeof name !== 'string' || !name.trim() ||
-      typeof type !== 'string' || !type.trim() ||
-      typeof duration !== 'number' ||
-      typeof attendees !== 'number' ||
-      typeof team_size !== 'number' ||
-      typeof budget_range !== 'string' || !budget_range.trim()
-    ) {
-      return NextResponse.json({ error: 'Missing or invalid required fields (name, type, duration, attendees, team_size, budget_range)' }, { status: 400 });
+    // Field Integrity & Normalization
+    const errors = [];
+    if (!name || typeof name !== 'string' || !name.trim()) errors.push('name');
+    if (!type || typeof type !== 'string' || !type.trim()) errors.push('type');
+    if (!budget_range || typeof budget_range !== 'string' || !budget_range.trim()) errors.push('budget_range');
+
+    const duration = Number(rawDuration);
+    if (isNaN(duration) || duration <= 0) errors.push('duration');
+
+    const attendees = Number(rawAttendees);
+    if (isNaN(attendees) || attendees <= 0) errors.push('attendees');
+
+    const team_size = Number(rawTeamSize);
+    if (isNaN(team_size) || team_size < 0) errors.push('team_size');
+
+    if (errors.length > 0) {
+      return NextResponse.json({ 
+        error: `Missing or invalid required fields: ${errors.join(', ')}`,
+        received: { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range }
+      }, { status: 400 });
     }
 
     // AUTO RETRY LOOP (Enhanced to 5 attempts)

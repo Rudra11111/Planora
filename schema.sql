@@ -27,3 +27,14 @@ CREATE TABLE IF NOT EXISTS plans (
 
 -- Index for fast token uniqueness lookups
 CREATE INDEX IF NOT EXISTS idx_plans_share_token ON plans(share_token);
+
+-- task_updates: stores the user-driven state changes for specific tasks
+CREATE TABLE IF NOT EXISTS task_updates (
+  id           UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id      UUID    NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  task_id      TEXT    NOT NULL,
+  status       TEXT    NOT NULL DEFAULT 'pending', -- 'pending' | 'done' | 'failed'
+  note         TEXT,
+  updated_at   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(plan_id, task_id)
+);
