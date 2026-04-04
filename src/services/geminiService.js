@@ -95,7 +95,7 @@ export async function callGemini(eventData) {
   const apiKey = process.env.GEMINI_API_KEY;
   console.log(`[Gemini] Using API Key starting with: ${apiKey ? apiKey.substring(0, 8) + '...' : 'NOT_FOUND'}`);
   const url = `${GEMINI_ENDPOINT}?key=${apiKey}`;
-
+  console.log('🚀 CALLING GEMINI NOW');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

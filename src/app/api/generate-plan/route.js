@@ -130,6 +130,7 @@ function fallbackPlan() {
 }
 
 export async function POST(req) {
+  console.log('API HIT: /api/generate-plan');
   try {
     const body = await req.json();
     const { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range, summary } = body;
