@@ -124,6 +124,9 @@ export async function callGemini(eventData) {
   }
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('RATE_LIMIT');
+    }
     const errBody = await response.text();
     throw new Error(`Gemini HTTP ${response.status}: ${errBody}`);
   }
