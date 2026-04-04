@@ -27,6 +27,10 @@ export async function POST(req) {
       return NextResponse.json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` }, { status: 400, headers: CORS_HEADERS });
     }
 
+    if (plan_id === 'demo-id') {
+      return NextResponse.json({ success: true, task_id, status }, { status: 200, headers: CORS_HEADERS });
+    }
+
     try {
       await upsertTaskUpdate({ plan_id, task_id, status, note });
     } catch (dbErr) {
