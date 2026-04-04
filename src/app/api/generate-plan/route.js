@@ -109,7 +109,7 @@ export async function POST(req) {
 
   if (now - lastCall < 2000) {
     console.warn('⚠️ Double-trigger blocked by Smart Guard');
-    return NextResponse.json({ error: "Too fast" }, { status: 429, headers: CORS_HEADERS });
+    return NextResponse.json({ error: "RATE_LIMIT", retry_after: 2 }, { status: 429, headers: CORS_HEADERS });
   }
   lastCall = now;
 
@@ -169,16 +169,24 @@ export async function POST(req) {
         throw new Error("INVALID_PLAN_STRUCTURE");
       }
     } catch (err) {
-      // ❌ FAIL -> SILENT FALLBACK TO DEMO
-      console.error("⚠️ Falling back to DEMO:", err.message);
+      console.error("❌ AI Generation Failed:", err.message);
 
-      // Simulate AI "thinking" time for the demo switch
+      // If it's a rate limit or timeout, tell the user exactly what happened
+      if (err.message === 'RATE_LIMIT' || err.message.includes('timeout')) {
+         return NextResponse.json({ 
+           error: err.message === 'RATE_LIMIT' ? 'AI_RATE_LIMIT' : 'AI_TIMEOUT', 
+           details: err.message 
+         }, { status: 503, headers: CORS_HEADERS });
+      }
+
+      // ❌ FAIL -> SILENT FALLBACK TO DEMO (Only for standard generation errors)
+      console.warn("⚠️ Falling back to DEMO for safety...");
       await delay(Math.floor(4000 + Math.random() * 2000));
-
       return NextResponse.json({
         plan: fallbackPlan(),
         token: "demo-token",
-        plan_id: "demo-id"
+        plan_id: "demo-id",
+        warning: "ai_generation_failed"
       }, { status: 200, headers: CORS_HEADERS });
     }
 
