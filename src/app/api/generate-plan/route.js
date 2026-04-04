@@ -4,6 +4,17 @@ import { callGemini } from '../../../services/geminiService.js';
 import { checkTokenExists, insertEvent, insertPlan, deleteEvent } from '../../../services/dbService.js';
 import { validateTopLevel, validateTasks, validatePlanStructure } from '../../../validators/planValidator.js';
 import { generateToken } from '../../../utils/tokenGenerator.js';
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
 function validatePlan(plan) {
   if (!plan) return false;
 
@@ -295,9 +306,9 @@ export async function POST(req) {
     // RULE 10: LOGGING & DEBUG
     console.log("[Generate Plan] Success! UUID:", planId, "Token:", shareToken);
 
-    return NextResponse.json(finalPayload, { status: 200 });
+    return NextResponse.json(finalPayload, { status: 200, headers: CORS_HEADERS });
   } catch (error) {
     console.error('Unhandled Server Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error: ' + error?.message + ' | ' + error?.stack }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error: ' + error?.message + ' | ' + error?.stack }, { status: 500, headers: CORS_HEADERS });
   }
 }

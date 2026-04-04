@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { getPlanByToken, getTaskUpdates } from '../../../services/dbService.js';
 import { VALID_CATEGORIES } from '../../../validators/planValidator.js';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 const ALLOWED_SCOPES = [...VALID_CATEGORIES.map(c => c.toLowerCase()), "full"];
 
 export async function GET(req) {
