@@ -20,7 +20,7 @@ This document outlines the complete sequence of user interactions on the fronten
 ---
 
 ## 2. The Wait State (AI Processing)
-**Because the Gemini AI securely processes and validates complex operations matching our strict rules, the generation takes ~15 seconds.**
+**Because the Groq AI securely processes and validates complex operations matching our strict rules, the generation takes ~15 seconds.**
 
 * **The Interface:** An immersive loading screen.
 * **The Experience:** Instead of a frozen spinner, the UI cycles through progress text to mask the delay:

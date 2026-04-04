@@ -59,7 +59,7 @@ Thanks to the backend structural guards, the frontend can **safely assume** this
    - Inputs: Event Name, Event Type (dropdown), Duration (number), Expected Attendees (number), Managing Team Size (number), Budget Range (text).
    - Validation: All fields must be non-empty strings/numbers to prevent HTTP 400 errors.
 2. **Handle the "Wait State":**
-   - The Gemini AI call takes between 10–25 seconds.
+   - The Groq AI call takes between 10–25 seconds.
    - Implement an immersive loading state (e.g., Skeleton loaders, or a progress stepper: "Analyzing Requirements..." ➔ "Structuring Timeline..." ➔ "Balancing Budget...").
 3. **Error Handling (Crucial):**
    - Must catch and display `HTTP 500` / `HTTP 429` errors smoothly (e.g., "AI is currently at capacity, retrying in X seconds" or "Validation failed").
