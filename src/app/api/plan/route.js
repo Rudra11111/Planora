@@ -22,6 +22,24 @@ export async function GET(req) {
     // Ensure backwards compatibility with old spec ?scope=logistics
     const scopeParam = searchParams.get('scope') || 'full';
     const scope = scopeParam.toLowerCase();
+    
+    // 🧱 SCOPE FILTER HELPER
+    const applyScopeFilter = (planData, targetScope) => {
+      if (!planData || targetScope === 'full') return planData;
+      
+      const filtered = { ...planData };
+      if (Array.isArray(filtered.tasks)) {
+        filtered.tasks = filtered.tasks.filter(t => 
+          String(t.category || '').toLowerCase() === targetScope
+        );
+      }
+      
+      // 🔒 Scrub sensitive data for restricted views
+      delete filtered.budget;
+      delete filtered.promo;
+      delete filtered.risks;
+      return filtered;
+    };
 
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400, headers: CORS_HEADERS });
@@ -32,11 +50,12 @@ export async function GET(req) {
     }
 
     if (token === 'demo-token') {
+      const plan = applyScopeFilter(fallbackPlan(), scope);
       return NextResponse.json({
         plan_id: 'demo-id',
         token: 'demo-token',
         event: { name: 'Sample Event (Demo)', type: 'conference' },
-        plan: fallbackPlan(),
+        plan,
         scope: scope
       }, { status: 200, headers: CORS_HEADERS });
     }
@@ -49,7 +68,7 @@ export async function GET(req) {
       return NextResponse.json({ error: err.message }, { status: 404, headers: CORS_HEADERS });
     }
 
-    const planData = dbPlan.plan_data;
+    let planData = { ...dbPlan.plan_data };
 
     // 2. Fetch task states & merge
     const taskUpdates = await getTaskUpdates(dbPlan.id);
@@ -69,23 +88,13 @@ export async function GET(req) {
       });
     }
 
-    // 3. Strict Server-Side Scope Filtering
-    if (scope !== 'full') {
-      // Filter tasks strictly by matching lowercase category
-      if (Array.isArray(planData.tasks)) {
-        planData.tasks = planData.tasks.filter(t => t.category.toLowerCase() === scope);
-      }
-      
-      // Permanently SCRUB sensitive data from backend response
-      delete planData.budget;
-      delete planData.promo;
-      delete planData.risks;
-    }
+    // 3. Apply Server-Side Scope Filtering
+    planData = applyScopeFilter(planData, scope);
 
     return NextResponse.json({
       plan_id: dbPlan.id,
       token: dbPlan.share_token,
-      event: dbPlan.events, // e.g. name, type
+      event: dbPlan.events,
       plan: planData,
       scope: scope
     }, { status: 200, headers: CORS_HEADERS });
