@@ -1,4 +1,6 @@
 // Uses native fetch — no SDK dependency, full control over API version & model.
+import { decodeEnv } from '../lib/decodeEnv.js';
+
 const GEMINI_ENDPOINT =
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
 
@@ -92,7 +94,8 @@ EXAMPLE OUTPUT:
  */
 export async function callGemini(eventData) {
   const prompt = buildPrompt(eventData);
-  const url = `${GEMINI_ENDPOINT}?key=${process.env.GEMINI_API_KEY}`;
+  const apiKey = decodeEnv('GEMINI_API_KEY');
+  const url = `${GEMINI_ENDPOINT}?key=${apiKey}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
