@@ -12,6 +12,15 @@
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "nanoid": "^5.1.2"
+    "nanoid": "^5.1.2",
+    "lucide-react": "^0.446.0",
+    "framer-motion": "^11.11.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13",
+    "postcss": "^8.4.47",
+    "autoprefixer": "^10.4.20"
   }
 }
