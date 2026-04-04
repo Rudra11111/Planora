@@ -1,5 +1,5 @@
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = 'llama3-8b-8192'; // Higher TPM limit on free tier vs 70b-versatile
 const TIMEOUT_MS = 25_000;
 
 /**
@@ -16,21 +16,21 @@ function buildMessages({ name, type, duration, attendees, team_size, budget_rang
       content: `You are an expert event planner AI. Generate a comprehensive, detailed event plan.
       
 STRICT OUTPUT FORMAT RULES:
-Return ONLY valid JSON. 
+Return ONLY valid JSON. Avoid any preamble, conversational filler, or wrap-around text.
 
 plan MUST include ALL of the following fields and match this schema exactly:
 - timeline (array of objects): { "time": "T-90 | Event Day 1 | etc", "activity": "string" }
-- tasks (array of minimum 12 items): { "id": "string", "task": "string", "category": "Logistics | Marketing | Technical | Operations", "deadline": "must match a timeline.time key", "priority": "High | Medium | Low" }
+- tasks (array of EXACTLY 20 items): { "id": "string", "task": "string", "category": "Logistics | Marketing | Technical | Operations", "deadline": "must match a timeline.time key", "priority": "High | Medium | Low" }
 - promo (object): { "channels": ["string"], "strategy": "string" }
 - risks (array of objects): { "issue": "string" }
 - budget (array of objects): { "item": "string", "cost": "₹range" }
 
-CRITICAL RULES:
+CRITICAL VALIDATION RULES:
 1. CATEGORY LOCK: category MUST be one of exactly: "Logistics", "Marketing", "Technical", "Operations"
-2. TIMELINE FLEXIBILITY: Generate a realistic timeline for this event type. Use logical strings for the 'time' field (e.g. "T-90", "T-7", "Event Day - Day 1", "T+7").
-3. DO NOT OMIT ANY FIELD.
-4. DO NOT ADD EXTRA FIELDS like title or summary.
-5. DEADLINE STRICT MATCH: Every task.deadline MUST EXACTLY match one of the timeline.time values. No variations allowed.`
+2. TASK VOLUME: Generate exactly 20 tasks, with 5 tasks in each of the 4 categories.
+3. DEADLINE STRICT MATCH: Every single task.deadline MUST EXACTLY match one of the timeline.time values. No variations allowed.
+4. CURRENCY: All costs must be in INR using the ₹ symbol.
+5. ZERO OMISSION: Do not omit any field or subfield. Do not add extra top-level fields.`
     },
     {
       role: 'user',
@@ -73,7 +73,7 @@ export async function callGroq(eventData) {
         messages,
         model: MODEL,
         temperature: 0.1,
-        max_tokens: 4096,
+        max_tokens: 2048,
         response_format: { type: "json_object" }
       }),
       signal: controller.signal,
