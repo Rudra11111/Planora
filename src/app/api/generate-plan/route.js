@@ -101,8 +101,18 @@ function delay(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
+let lastCall = 0;
+
 export async function POST(req) {
-  console.log('API HIT: /api/generate-plan');
+  const now = Date.now();
+  console.log('API HIT:', now);
+
+  if (now - lastCall < 2000) {
+    console.warn('⚠️ Double-trigger blocked by Smart Guard');
+    return NextResponse.json({ error: "Too fast" }, { status: 429, headers: CORS_HEADERS });
+  }
+  lastCall = now;
+
   try {
     const body = await req.json();
     const { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range, summary } = body;
