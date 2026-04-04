@@ -3,15 +3,20 @@ import { decodeEnv } from '../lib/decodeEnv.js';
 
 let _supabase = null;
 
+// Safe version — returns null instead of throwing, used for optional/fallback vars
+function safeDecodeEnv(name) {
+  try { return decodeEnv(name); } catch { return null; }
+}
+
 function getSupabase() {
   if (_supabase) return _supabase;
 
-  const url = decodeEnv('SUPABASE_URL');
-  // Fallback to ANON_KEY if SERVICE_ROLE_KEY is missing (flexible hardening)
-  const key = decodeEnv('SUPABASE_SERVICE_ROLE_KEY') || decodeEnv('SUPABASE_ANON_KEY');
+  const url = decodeEnv('SUPABASE_URL'); // Required — throws if missing
+  // Prefer SERVICE_ROLE_KEY, fall back to ANON_KEY if not set
+  const key = safeDecodeEnv('SUPABASE_SERVICE_ROLE_KEY') || decodeEnv('SUPABASE_ANON_KEY');
 
   if (!url || !key) {
-    throw new Error("Missing Supabase environment variables (URL or Key)");
+    throw new Error('Missing Supabase environment variables (URL or Key)');
   }
 
   _supabase = createClient(url, key);
