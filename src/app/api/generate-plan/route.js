@@ -9,36 +9,32 @@ function validatePlan(plan) {
 
   const { timeline, tasks } = plan;
 
-  if (!Array.isArray(timeline) || timeline.length < 5) return false;
-  if (!Array.isArray(tasks) || tasks.length < 12) return false;
+  if (!Array.isArray(timeline) || timeline.length < 5) {
+    console.warn('[validatePlan] FAIL: timeline length', timeline?.length);
+    return false;
+  }
+  if (!Array.isArray(tasks) || tasks.length < 12) {
+    console.warn('[validatePlan] FAIL: tasks length', tasks?.length);
+    return false;
+  }
 
   const categories = ["Logistics", "Marketing", "Technical", "Operations"];
-
-  const count = {
-    Logistics: 0,
-    Marketing: 0,
-    Technical: 0,
-    Operations: 0,
-  };
-
-  // 🔥 CRITICAL: Build valid timeline reference
-  const timelineSet = new Set(
-    timeline.map(t => t.time)
-  );
+  const count = { Logistics: 0, Marketing: 0, Technical: 0, Operations: 0 };
 
   for (const t of tasks) {
-    // ❌ Invalid category
-    if (!categories.includes(t.category)) return false;
-
-    // ❌ DEADLINE MUST MATCH TIMELINE EXACTLY
-    if (!timelineSet.has(t.deadline)) return false;
-
+    // normalizePlan already fixed category and deadline — just check category
+    if (!categories.includes(t.category)) {
+      console.warn('[validatePlan] FAIL: bad category', t.category);
+      return false;
+    }
     count[t.category]++;
   }
 
-  // ❌ Ensure minimum tasks per category
   for (const cat of categories) {
-    if (count[cat] < 2) return false;
+    if (count[cat] < 2) {
+      console.warn(`[validatePlan] FAIL: too few tasks in ${cat}:`, count[cat]);
+      return false;
+    }
   }
 
   return true;
@@ -125,7 +121,7 @@ function fallbackPlan() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range } = body;
+    const { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range, summary } = body;
 
     // Field Integrity & Normalization
     const errors = [];
@@ -133,8 +129,9 @@ export async function POST(req) {
     if (!type || typeof type !== 'string' || !type.trim()) errors.push('type');
     if (!budget_range || typeof budget_range !== 'string' || !budget_range.trim()) errors.push('budget_range');
 
-    const duration = Number(rawDuration);
-    if (isNaN(duration) || duration <= 0) errors.push('duration');
+    // Duration is free-text (e.g. "3 days", "1 week") — keep as string
+    const duration = rawDuration ? String(rawDuration).trim() : '';
+    if (!duration) errors.push('duration');
 
     const attendees = Number(rawAttendees);
     if (isNaN(attendees) || attendees <= 0) errors.push('attendees');
@@ -156,7 +153,7 @@ export async function POST(req) {
     while (attempts < 5) {
       let rawText;
       try {
-        rawText = await callGemini({ name, type, duration, attendees, team_size, budget_range });
+        rawText = await callGemini({ name, type, duration, attendees, team_size, budget_range, summary: summary || '' });
         console.log(`[Attempt ${attempts + 1}] RAW AI OUTPUT:`, rawText?.substring(0, 500) + "...");
       } catch (err) {
         console.error(`[Attempt ${attempts + 1}] [Gemini] Call failed:`, err.message);

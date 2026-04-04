@@ -1,14 +1,17 @@
 // Uses native fetch — no SDK dependency, full control over API version & model.
-// PER SPEC: Must use gemini-1.5-flash but API key forces 2.5-flash
 const GEMINI_ENDPOINT =
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
 
 const TIMEOUT_MS = 25_000;
 
 /**
  * Builds the strict prompt for Gemini.
  */
-function buildPrompt({ name, type, duration, attendees, team_size, budget_range }) {
+function buildPrompt({ name, type, duration, attendees, team_size, budget_range, summary }) {
+  const summaryLine = summary && summary.trim()
+    ? `- Event Context / Summary: ${summary.trim()}`
+    : '';
+
   return `You are an expert event planner AI. Generate a comprehensive, detailed event plan.
 
 EVENT DETAILS:
@@ -17,7 +20,7 @@ EVENT DETAILS:
 - Duration: ${duration}
 - Attendees: ${attendees}
 - Team Size: ${team_size}
-- Budget Range: ${budget_range}
+- Budget Range: ${budget_range}${summaryLine ? '\n' + summaryLine : ''}
 
 STRICT OUTPUT FORMAT RULES:
 
