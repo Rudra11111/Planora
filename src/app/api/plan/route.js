@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPlanByToken, getTaskUpdates } from '../../../services/dbService.js';
+import { fallbackPlan } from '../../../utils/demoData.js';
 import { VALID_CATEGORIES } from '../../../validators/planValidator.js';
 
 const CORS_HEADERS = {
@@ -28,6 +29,16 @@ export async function GET(req) {
 
     if (!ALLOWED_SCOPES.includes(scope)) {
       return NextResponse.json({ error: `Invalid scope. Allowed: ${ALLOWED_SCOPES.join(', ')}` }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    if (token === 'demo-token') {
+      return NextResponse.json({
+        plan_id: 'demo-id',
+        token: 'demo-token',
+        event: { name: 'Sample Event (Demo)', type: 'conference' },
+        plan: fallbackPlan(),
+        scope: scope
+      }, { status: 200, headers: CORS_HEADERS });
     }
 
     // 1. Fetch from DB
