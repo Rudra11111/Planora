@@ -23,11 +23,11 @@ export async function GET(req) {
     const scope = scopeParam.toLowerCase();
 
     if (!token) {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Token is required' }, { status: 400, headers: CORS_HEADERS });
     }
 
     if (!ALLOWED_SCOPES.includes(scope)) {
-      return NextResponse.json({ error: `Invalid scope. Allowed: ${ALLOWED_SCOPES.join(', ')}` }, { status: 400 });
+      return NextResponse.json({ error: `Invalid scope. Allowed: ${ALLOWED_SCOPES.join(', ')}` }, { status: 400, headers: CORS_HEADERS });
     }
 
     // 1. Fetch from DB
@@ -35,7 +35,7 @@ export async function GET(req) {
     try {
       dbPlan = await getPlanByToken(token);
     } catch (err) {
-      return NextResponse.json({ error: err.message }, { status: 404 });
+      return NextResponse.json({ error: err.message }, { status: 404, headers: CORS_HEADERS });
     }
 
     const planData = dbPlan.plan_data;
@@ -77,10 +77,10 @@ export async function GET(req) {
       event: dbPlan.events, // e.g. name, type
       plan: planData,
       scope: scope
-    }, { status: 200 });
+    }, { status: 200, headers: CORS_HEADERS });
 
   } catch (err) {
     console.error('[Fetch Plan Error]:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: CORS_HEADERS });
   }
 }

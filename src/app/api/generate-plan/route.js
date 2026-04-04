@@ -154,7 +154,7 @@ export async function POST(req) {
       return NextResponse.json({ 
         error: `Missing or invalid required fields: ${errors.join(', ')}`,
         received: { name, type, duration: rawDuration, attendees: rawAttendees, team_size: rawTeamSize, budget_range }
-      }, { status: 400 });
+      }, { status: 400, headers: CORS_HEADERS });
     }
 
     // AUTO RETRY LOOP (Enhanced to 5 attempts)
@@ -172,7 +172,7 @@ export async function POST(req) {
           let retryAfter = 45;
           const match = err.message.match(/retry in ([\d\.]+)s/);
           if (match) retryAfter = Math.ceil(parseFloat(match[1]));
-          return NextResponse.json({ error: 'RATE_LIMIT', retry_after: retryAfter }, { status: 429 });
+          return NextResponse.json({ error: 'RATE_LIMIT', retry_after: retryAfter }, { status: 429, headers: CORS_HEADERS });
         }
         attempts++;
         continue;
@@ -243,7 +243,7 @@ export async function POST(req) {
     try {
       validatePlanStructure(plan);
     } catch (err) {
-      return NextResponse.json({ error: `Plan structure rejection: ${err.message}` }, { status: 500 });
+      return NextResponse.json({ error: `Plan structure rejection: ${err.message}` }, { status: 500, headers: CORS_HEADERS });
     }
 
     // RULE 6: TOKEN GENERATION
@@ -258,11 +258,11 @@ export async function POST(req) {
           break;
         }
       } catch (e) {
-        return NextResponse.json({ error: 'Token uniqueness check failed' }, { status: 500 });
+        return NextResponse.json({ error: 'Token uniqueness check failed' }, { status: 500, headers: CORS_HEADERS });
       }
       attempts++;
     }
-    if (!shareToken) return NextResponse.json({ error: 'Token collision unresolved' }, { status: 500 });
+    if (!shareToken) return NextResponse.json({ error: 'Token collision unresolved' }, { status: 500, headers: CORS_HEADERS });
 
     // RULE 7: PSEUDO-ATOMIC DB
     let eventId;
@@ -276,7 +276,7 @@ export async function POST(req) {
         budget_range 
       });
     } catch (err) {
-      return NextResponse.json({ error: 'DB insert failure (event)' }, { status: 500 });
+      return NextResponse.json({ error: 'DB insert failure (event)' }, { status: 500, headers: CORS_HEADERS });
     }
 
     let planId;
@@ -289,7 +289,7 @@ export async function POST(req) {
     } catch (err) {
       // RULE 8: ROLLBACK LOGIC
       await deleteEvent(eventId);
-      return NextResponse.json({ error: 'DB insert failure (plan)' }, { status: 500 });
+      return NextResponse.json({ error: 'DB insert failure (plan)' }, { status: 500, headers: CORS_HEADERS });
     }
 
     // RULE 9: FINAL RESPONSE GUARD
@@ -300,7 +300,7 @@ export async function POST(req) {
     };
 
     if (!finalPayload.plan || !finalPayload.token || !finalPayload.plan_id) {
-      return NextResponse.json({ error: 'Final payload is missing fields' }, { status: 500 });
+      return NextResponse.json({ error: 'Final payload is missing fields' }, { status: 500, headers: CORS_HEADERS });
     }
 
     // RULE 10: LOGGING & DEBUG
