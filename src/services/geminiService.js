@@ -1,6 +1,4 @@
 // Uses native fetch — no SDK dependency, full control over API version & model.
-import { decodeEnv } from '../lib/decodeEnv.js';
-
 const GEMINI_ENDPOINT =
   `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`;
 
@@ -88,14 +86,13 @@ EXAMPLE OUTPUT:
 }
 
 /**
- * Calls Gemini REST API directly with a 15-second AbortSignal timeout.
+ * Calls Gemini REST API directly with a 25-second AbortSignal timeout.
  * @param {object} eventData
  * @returns {Promise<string>} Raw text from Gemini
  */
 export async function callGemini(eventData) {
   const prompt = buildPrompt(eventData);
-  const apiKey = decodeEnv('GEMINI_API_KEY');
-  const url = `${GEMINI_ENDPOINT}?key=${apiKey}`;
+  const url = `${GEMINI_ENDPOINT}?key=${process.env.GEMINI_API_KEY}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -109,7 +106,7 @@ export async function callGemini(eventData) {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           response_mime_type: "application/json",
-          temperature: 0.1, // Lower temperature for more consistent JSON
+          temperature: 0.1,
           maxOutputTokens: 4096,
         },
       }),
@@ -117,7 +114,7 @@ export async function callGemini(eventData) {
     });
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('Gemini API call timed out after 15 seconds');
+      throw new Error('Gemini API call timed out after 25 seconds');
     }
     throw err;
   } finally {
